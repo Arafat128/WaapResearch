@@ -11,7 +11,7 @@ import { TokenSelector } from "@/components/TokenSelector";
 import { RiskWarning } from "@/components/SwapBridgeForm";
 import { useWaap } from "@/components/WaapProvider";
 import { approveErc20Spend, readErc20Allowance, validateAddress } from "@/lib/erc20";
-import { fetchQuote } from "@/lib/lifi";
+import { assertSafeEvmTxRequest, fetchQuote } from "@/lib/lifi";
 import {
   DEFAULT_SLIPPAGE,
   explorerTxUrl,
@@ -185,6 +185,12 @@ export function RepeatActionTool({ defaultChainId }: { defaultChainId: number })
             finalStatus = receipt.effects?.status?.status === "failure" ? "failed" : "confirmed";
           } else {
             if (!tx.to || !tx.data) throw new Error("LI.FI did not return executable EVM transaction data.");
+            // H3: refuse to sign if LI.FI's tx.to / tx.value do not match the previewed quote.
+            assertSafeEvmTxRequest(activeQuote, {
+              fromTokenAddress: fromToken,
+              nativeTokenAddress: getNativeTokenAddress(fromChain),
+              chainId: fromChain
+            });
             hash = await sendWaapTransaction({
               from: fromAddress,
               to: tx.to,

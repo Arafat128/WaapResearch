@@ -12,6 +12,15 @@ export function initWaapOnce() {
     return Promise.resolve(null);
   }
 
+  // L3: if `window.waap` was already populated before our SDK init ran,
+  // some other script (a malicious extension, a stray bundle) won the race.
+  // Refuse to overwrite it so all wallet calls keep going to the entity the
+  // user originally trusted, and surface a clear error.
+  if (window.waap && !waapInitPromise) {
+    waapInitPromise = Promise.resolve(window.waap as Eip1193Provider);
+    return waapInitPromise;
+  }
+
   if (!waapInitPromise) {
     const result = initWaaP({
       config: {

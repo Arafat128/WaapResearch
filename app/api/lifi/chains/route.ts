@@ -1,8 +1,14 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { checkRateLimit, checkSameOrigin } from "@/lib/rate-limit";
 
 const LIFI_API_BASE = process.env.NEXT_PUBLIC_LIFI_API_BASE ?? "https://li.quest/v1";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const blocked = checkSameOrigin(request);
+  if (blocked) return blocked;
+  const limited = checkRateLimit(request, { limit: 60, namespace: "lifi:chains", windowMs: 60_000 });
+  if (limited) return limited;
+
   try {
     const response = await fetch(`${LIFI_API_BASE}/chains`, {
       headers: lifiHeaders(),

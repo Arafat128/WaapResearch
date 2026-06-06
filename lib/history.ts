@@ -37,7 +37,14 @@ function readJson<T>(key: string, fallback: T): T {
 
 function writeJson<T>(key: string, value: T) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(key, JSON.stringify(value));
+  // L4: localStorage.setItem can throw on quota exceeded or in private-mode
+  // Safari. Swallow the failure — history/settings are non-critical UX state
+  // and a thrown exception here would unmount the calling React tree.
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // ignore; the in-memory state still applies for this session.
+  }
 }
 
 export function getHistory() {

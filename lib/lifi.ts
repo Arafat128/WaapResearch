@@ -1,6 +1,8 @@
-import { formatUnits, parseUnits } from "viem";
+import { formatUnits, isAddress, parseUnits } from "viem";
 import { CHAINS, getLifiChainId, getNativeTokenAddress, isSuiChain, SUI_NATIVE_TOKEN_ADDRESS } from "@/lib/chains";
 import type { LifiQuote, LifiQuoteRequest, TokenOption } from "@/types";
+
+const NATIVE_VALUE_BUFFER_BPS = 50n; // 0.5% headroom over user amount to cover wei rounding
 
 const API_BASE = process.env.NEXT_PUBLIC_LIFI_API_BASE ?? "https://li.quest/v1";
 const TOKEN_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -65,6 +67,83 @@ export function buildLifiQuoteUrl(params: URLSearchParams) {
 
 export function normalizeUserAmount(amount: string, decimals: number) {
   return parseUnits(amount || "0", decimals).toString();
+}
+
+/**
+ * H3: Defence-in-depth check on LI.FI's returned transactionRequest.
+ *
+ * The user only sees a preview built from LI.FI's response, so a hostile or
+ * compromised aggregator could mismatch preview vs. actual `to` / `value`.
+ * Before signing we require:
+ *   1. `tx.to` is a valid EVM address and matches `quote.approvalAddress`
+ *      (LI.FI's router) when one is provided.
+ *   2. `tx.value` (native amount) does not exceed the user's `fromAmount`
+ *      plus a small rounding buffer, for native-token swaps. ERC20 swaps
+ *      should have `value === 0`.
+ */
+export function assertSafeEvmTxRequest(
+  quote: LifiQuote,
+  context: {
+    fromTokenAddress: string;
+    nativeTokenAddress: string;
+    chainId: number;
+  }
+): void {
+  const tx = quote.transactionRequest;
+  if (!tx) throw new Error("Quote is missing an executable transaction. Refresh and try again.");
+  if (!tx.to || !isAddress(String(tx.to))) {
+    throw new Error("Quote returned an invalid destination address. Refresh and try again.");
+  }
+  if (!tx.data || !String(tx.data).startsWith("0x")) {
+    throw new Error("Quote returned invalid call data. Refresh and try again.");
+  }
+
+  if (quote.approvalAddress && isAddress(quote.approvalAddress)) {
+    if (String(tx.to).toLowerCase() !== quote.approvalAddress.toLowerCase()) {
+      throw new Error(
+        "Quote destination does not match LI.FI's approval router. Refusing to sign — refresh the quote."
+      );
+    }
+  }
+
+  const expectedChain = typeof tx.chainId === "number"
+    ? tx.chainId
+    : typeof tx.chainId === "string"
+    ? Number.parseInt(String(tx.chainId), tx.chainId.toString().startsWith("0x") ? 16 : 10)
+    : context.chainId;
+  if (Number.isFinite(expectedChain) && expectedChain !== context.chainId) {
+    throw new Error("Quote chain mismatch. Refresh the quote on the correct network.");
+  }
+
+  let txValue: bigint;
+  try {
+    const raw = String(tx.value ?? "0x0");
+    txValue = raw.startsWith("0x") ? BigInt(raw) : BigInt(raw);
+  } catch {
+    throw new Error("Quote returned a malformed value field. Refusing to sign.");
+  }
+
+  const isNativeSource = context.fromTokenAddress.toLowerCase() === context.nativeTokenAddress.toLowerCase();
+  let fromAmount = 0n;
+  try {
+    fromAmount = BigInt(quote.fromAmount);
+  } catch {
+    fromAmount = 0n;
+  }
+
+  if (!isNativeSource) {
+    // ERC20 swaps must not move native value.
+    if (txValue > 0n) {
+      throw new Error("Quote unexpectedly moves native funds for an ERC20 swap. Refusing to sign.");
+    }
+  } else if (fromAmount > 0n) {
+    const allowed = fromAmount + (fromAmount * NATIVE_VALUE_BUFFER_BPS) / 10_000n;
+    if (txValue > allowed) {
+      throw new Error(
+        "Quote tries to send more native value than the amount you entered. Refusing to sign — refresh the quote."
+      );
+    }
+  }
 }
 
 function normalizeToken(token: LifiToken, appChainId?: number): TokenOption {
@@ -184,11 +263,26 @@ function readTokenCache(chainId: number) {
     if (!raw) return undefined;
     const parsed = JSON.parse(raw) as { timestamp?: number; tokens?: TokenOption[] };
     if (!parsed.timestamp || !parsed.tokens || Date.now() - parsed.timestamp >= TOKEN_CACHE_TTL_MS) return undefined;
-    tokenMemoryCache.set(chainId, { timestamp: parsed.timestamp, tokens: parsed.tokens });
-    return parsed.tokens;
+    // M4: validate every cached token address shape before reuse so an XSS-poisoned
+    // cache can't inject a malicious address into the user's send forms.
+    const safe = parsed.tokens.filter((token) => isValidCachedToken(token, chainId));
+    if (!safe.length) return undefined;
+    tokenMemoryCache.set(chainId, { timestamp: parsed.timestamp, tokens: safe });
+    return safe;
   } catch {
     return undefined;
   }
+}
+
+function isValidCachedToken(token: TokenOption, chainId: number) {
+  if (!token || typeof token.address !== "string") return false;
+  if (typeof token.symbol !== "string" || typeof token.decimals !== "number") return false;
+  if (token.decimals < 0 || token.decimals > 36) return false;
+  if (isSuiChain(chainId)) {
+    // Sui type strings start with "0x" and may contain "::"; just sanity check non-empty.
+    return token.address.length > 0 && token.address.length < 256;
+  }
+  return isAddress(token.address);
 }
 
 function writeTokenCache(chainId: number, tokens: TokenOption[]) {

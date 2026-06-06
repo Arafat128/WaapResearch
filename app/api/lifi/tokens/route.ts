@@ -1,16 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getLifiChainId } from "@/lib/chains";
+import { getLifiChainId, isLifiSupportedChain } from "@/lib/chains";
+import { checkRateLimit, checkSameOrigin } from "@/lib/rate-limit";
 
 const LIFI_API_BASE = process.env.NEXT_PUBLIC_LIFI_API_BASE ?? "https://li.quest/v1";
 
 export async function GET(request: NextRequest) {
-  const chainId = request.nextUrl.searchParams.get("chainId");
-  if (!chainId) {
-    return NextResponse.json({ message: "chainId is required." }, { status: 400 });
+  const blocked = checkSameOrigin(request);
+  if (blocked) return blocked;
+  const limited = checkRateLimit(request, { limit: 90, namespace: "lifi:tokens", windowMs: 60_000 });
+  if (limited) return limited;
+
+  const chainIdRaw = request.nextUrl.searchParams.get("chainId");
+  const chainId = Number(chainIdRaw);
+  if (!chainIdRaw || !Number.isFinite(chainId) || !isLifiSupportedChain(chainId)) {
+    return NextResponse.json({ message: "chainId is required and must be a LI.FI-supported chain." }, { status: 400 });
   }
 
   try {
-    const response = await fetch(`${LIFI_API_BASE}/tokens?chains=${getLifiChainId(Number(chainId))}`, {
+    const response = await fetch(`${LIFI_API_BASE}/tokens?chains=${getLifiChainId(chainId)}`, {
       headers: lifiHeaders(),
       cache: "no-store"
     });
