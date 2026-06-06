@@ -212,6 +212,88 @@ button:hover svg {
   visibility: hidden;
 }
 
+.pixel-pet-close {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: linear-gradient(145deg, rgba(18, 24, 47, 0.92), rgba(34, 26, 58, 0.92));
+  color: #f7fbf6;
+  border: 1px solid rgba(176, 245, 255, 0.55);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+  cursor: pointer;
+  box-shadow:
+    0 6px 14px rgba(4, 8, 20, 0.42),
+    0 0 12px rgba(84, 232, 255, 0.22);
+}
+
+.pixel-pet-close:hover,
+.pixel-pet-close:focus-visible {
+  transform: scale(1.08);
+  box-shadow:
+    0 6px 16px rgba(4, 8, 20, 0.52),
+    0 0 16px rgba(84, 232, 255, 0.38);
+  outline: none;
+}
+
+.pixel-pet:hover .pixel-pet-close,
+.pixel-pet:focus-within .pixel-pet-close {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (hover: none) {
+  .pixel-pet-close {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+.pixel-pet-summon {
+  position: fixed;
+  right: 14px;
+  bottom: 14px;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  background:
+    linear-gradient(145deg, rgba(17, 24, 46, 0.94), rgba(38, 26, 62, 0.94)),
+    radial-gradient(circle at 30% 30%, rgba(255, 201, 235, 0.3), transparent 70%);
+  border: 1px solid rgba(176, 245, 255, 0.55);
+  color: #fff2a5;
+  font-size: 20px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 46;
+  cursor: pointer;
+  box-shadow:
+    0 10px 24px rgba(4, 8, 20, 0.55),
+    0 0 18px rgba(84, 232, 255, 0.32);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.pixel-pet-summon:hover,
+.pixel-pet-summon:focus-visible {
+  transform: scale(1.08) rotate(-8deg);
+  box-shadow:
+    0 12px 28px rgba(4, 8, 20, 0.62),
+    0 0 22px rgba(255, 188, 236, 0.4);
+  outline: none;
+}
+
 .pixel-pet-sprite {
   position: absolute;
   left: 0;
@@ -1092,17 +1174,35 @@ button:hover svg {
 
 @media (max-width: 720px) {
   .pixel-pet {
-    width: 88px;
-    height: 104px;
+    width: 96px;
+    height: 120px;
   }
 
   .pixel-pet-bubble {
-    bottom: 100px;
-    max-width: 150px;
+    bottom: calc(100% + 6px);
+    max-width: min(160px, calc(100vw - 32px));
+    padding: 6px 8px;
+    font-size: 11px;
   }
 
   .pixel-pet-sprite {
-    scale: 0.78;
+    scale: 0.72;
+    transform-origin: top left;
+  }
+
+  .pixel-pet-close {
+    width: 30px;
+    height: 30px;
+    top: 0;
+    right: 0;
+    font-size: 20px;
+  }
+
+  .pixel-pet-summon {
+    width: 48px;
+    height: 48px;
+    right: 12px;
+    bottom: 12px;
   }
 }
 
