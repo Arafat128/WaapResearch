@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { SpeedInsights } from '@vercel/speed-insights/next';
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -19,6 +20,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <div className="waap-sparkle-layer waap-sparkle-white" />
         </div>
         {children}
+        <SpeedInsights />
       </body>
     </html>
   );
