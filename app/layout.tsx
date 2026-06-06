@@ -9,7 +9,17 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className="dark">
-      <body>{children}</body>
+      <body>
+        {/* Four independent sparkle layers so each color drifts at its own
+            speed and direction. See globals.css `.waap-sparkles`. */}
+        <div className="waap-sparkles" aria-hidden="true">
+          <div className="waap-sparkle-layer waap-sparkle-cyan" />
+          <div className="waap-sparkle-layer waap-sparkle-gold" />
+          <div className="waap-sparkle-layer waap-sparkle-pink" />
+          <div className="waap-sparkle-layer waap-sparkle-white" />
+        </div>
+        {children}
+      </body>
     </html>
   );
 }

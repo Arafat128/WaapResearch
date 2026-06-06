@@ -48,16 +48,12 @@ body {
   isolation: isolate;
 }
 
-body::before,
-body::after {
+body::before {
   content: "";
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 0;
-}
-
-body::before {
   background-image:
     linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
@@ -66,15 +62,72 @@ body::before {
   opacity: 0.28;
 }
 
-body::after {
-  background:
-    radial-gradient(circle, rgba(74, 243, 255, 0.98) 0 0.13rem, rgba(74, 243, 255, 0.28) 0.14rem 0.28rem, transparent 0.34rem) 4rem 5rem / 13rem 13rem,
-    radial-gradient(circle, rgba(255, 236, 139, 0.98) 0 0.12rem, rgba(255, 236, 139, 0.32) 0.13rem 0.25rem, transparent 0.32rem) 9rem 3rem / 17rem 17rem,
-    radial-gradient(circle, rgba(255, 154, 231, 0.96) 0 0.11rem, rgba(255, 154, 231, 0.28) 0.12rem 0.24rem, transparent 0.3rem) 2rem 10rem / 19rem 19rem,
-    radial-gradient(circle, rgba(232, 255, 255, 0.92) 0 0.08rem, transparent 0.22rem) 0 0 / 11rem 11rem;
+/* Independent sparkle layers — each color is its own DOM node so it can
+   drift at its own duration, direction, and twinkle rhythm. */
+.waap-sparkles {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
   mix-blend-mode: screen;
-  animation: waap-sparkle-drift 18s linear infinite, waap-particle-twinkle 2.8s ease-in-out infinite;
-  opacity: 0.78;
+  opacity: 0.82;
+}
+
+.waap-sparkle-layer {
+  position: absolute;
+  inset: 0;
+  will-change: background-position, opacity, filter;
+}
+
+.waap-sparkle-cyan {
+  background:
+    radial-gradient(
+      circle,
+      rgba(74, 243, 255, 0.98) 0 0.13rem,
+      rgba(74, 243, 255, 0.28) 0.14rem 0.28rem,
+      transparent 0.34rem
+    ) 0 0 / 13rem 13rem;
+  animation:
+    waap-drift-cyan 23s linear infinite,
+    waap-particle-twinkle 2.6s ease-in-out infinite;
+}
+
+.waap-sparkle-gold {
+  background:
+    radial-gradient(
+      circle,
+      rgba(255, 236, 139, 0.98) 0 0.12rem,
+      rgba(255, 236, 139, 0.32) 0.13rem 0.25rem,
+      transparent 0.32rem
+    ) 0 0 / 17rem 17rem;
+  animation:
+    waap-drift-gold 31s linear infinite,
+    waap-particle-twinkle 3.7s ease-in-out infinite -0.8s;
+}
+
+.waap-sparkle-pink {
+  background:
+    radial-gradient(
+      circle,
+      rgba(255, 154, 231, 0.96) 0 0.11rem,
+      rgba(255, 154, 231, 0.28) 0.12rem 0.24rem,
+      transparent 0.3rem
+    ) 0 0 / 19rem 19rem;
+  animation:
+    waap-drift-pink 41s linear infinite,
+    waap-particle-twinkle 4.3s ease-in-out infinite -1.6s;
+}
+
+.waap-sparkle-white {
+  background:
+    radial-gradient(
+      circle,
+      rgba(232, 255, 255, 0.92) 0 0.08rem,
+      transparent 0.22rem
+    ) 0 0 / 11rem 11rem;
+  animation:
+    waap-drift-white 19s linear infinite,
+    waap-particle-twinkle 2.1s ease-in-out infinite -0.4s;
 }
 
 main {
@@ -184,46 +237,28 @@ button:hover svg {
   gap: 1rem;
 }
 
-/* Background sparkle drift — restored after the pet CSS purge removed it.
-   Each of the four radial-gradient layers gets its own trajectory so the
-   dots don't all drift in the same direction. Tiles are 11–19rem so the
-   end positions just continue the loop seamlessly. */
-@keyframes waap-sparkle-drift {
-  0% {
-    background-position:
-      4rem 5rem,
-      9rem 3rem,
-      2rem 10rem,
-      0 0;
-  }
-  25% {
-    background-position:
-      11rem 9rem,    /* cyan: drifts down-right */
-      4rem 12rem,    /* gold: drifts down-left */
-      9rem 4rem,     /* pink: drifts up-right */
-      -3rem 6rem;    /* white: drifts down-left */
-  }
-  50% {
-    background-position:
-      18rem 14rem,
-      -2rem 18rem,
-      15rem -4rem,
-      -8rem 11rem;
-  }
-  75% {
-    background-position:
-      10rem 19rem,
-      6rem 9rem,
-      19rem 6rem,
-      -4rem 4rem;
-  }
-  100% {
-    background-position:
-      4rem 5rem,
-      9rem 3rem,
-      2rem 10rem,
-      0 0;
-  }
+/* Per-layer drift. Each translates by exactly one tile of its own
+   background-size, so `linear` loops seamlessly (the pattern repeats).
+   Different durations + different directions = the layers almost never
+   sync up, which reads as freely roaming dots. */
+@keyframes waap-drift-cyan {
+  from { background-position: 0 0; }
+  to   { background-position: 13rem 13rem; }   /* down-right */
+}
+
+@keyframes waap-drift-gold {
+  from { background-position: 0 0; }
+  to   { background-position: -17rem 17rem; }  /* down-left */
+}
+
+@keyframes waap-drift-pink {
+  from { background-position: 0 0; }
+  to   { background-position: 19rem -19rem; }  /* up-right */
+}
+
+@keyframes waap-drift-white {
+  from { background-position: 0 0; }
+  to   { background-position: -11rem -11rem; } /* up-left */
 }
 
 @keyframes waap-particle-twinkle {
@@ -254,7 +289,7 @@ button:hover svg {
 
 @media (prefers-reduced-motion: reduce) {
   *,
-  body::after {
+  .waap-sparkle-layer {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
