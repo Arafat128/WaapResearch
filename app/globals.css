@@ -184,6 +184,50 @@ button:hover svg {
   gap: 1rem;
 }
 
+/* Background sparkle drift — restored after the pet CSS purge removed it. */
+@keyframes waap-sparkle-drift {
+  0% {
+    background-position:
+      4rem 5rem,
+      9rem 3rem,
+      2rem 10rem,
+      0 0;
+  }
+  100% {
+    background-position:
+      17rem 18rem,
+      26rem 20rem,
+      21rem 29rem,
+      11rem 11rem;
+  }
+}
+
+@keyframes waap-particle-twinkle {
+  0%,
+  100% {
+    opacity: 0.78;
+    filter: brightness(1);
+  }
+  50% {
+    opacity: 1;
+    filter: brightness(1.45) saturate(1.1);
+  }
+}
+
+@keyframes waap-glow-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 18px rgba(70, 230, 255, 0.34),
+      0 0 0 1px rgba(255, 255, 255, 0.04);
+  }
+  50% {
+    box-shadow:
+      0 0 26px rgba(255, 188, 236, 0.46),
+      0 0 0 1px rgba(255, 255, 255, 0.08);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   body::after {
