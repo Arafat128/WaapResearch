@@ -13,12 +13,11 @@ import { ReceiveCard } from "@/components/ReceiveCard";
 import { SendForm } from "@/components/SendForm";
 import { MultiSendForm } from "@/components/MultiSendForm";
 import { SwapBridgeForm } from "@/components/SwapBridgeForm";
-import { RepeatActionTool } from "@/components/RepeatActionTool";
+import { RepeatActionGate } from "@/components/RepeatActionGate";
 import { TransactionHistory } from "@/components/TransactionHistory";
 import { SettingsPanel } from "@/components/SettingsPanel";
 import { WalletBalances } from "@/components/WalletBalances";
 import { MissionGuardrails } from "@/components/MissionGuardrails";
-import { PixelPet } from "@/components/PixelPet";
 import { CHAINS, explorerAddressUrl, getChain, isSuiChain, SUI_MAINNET_CHAIN_ID } from "@/lib/chains";
 import { getNativeBalance } from "@/lib/waap";
 import { getSuiBalances } from "@/lib/sui";
@@ -28,7 +27,6 @@ export default function Home() {
   return (
     <WaapProvider>
       <Dashboard />
-      <PixelPet />
     </WaapProvider>
   );
 }
@@ -156,7 +154,7 @@ function Dashboard() {
       </section>
 
       <WalletBalances address={activeAddress} chainId={displayChainId} />
-      <RepeatActionTool defaultChainId={selectedChain} />
+      <RepeatActionGate defaultChainId={selectedChain} />
       <TransactionHistory />
     </main>
   );
