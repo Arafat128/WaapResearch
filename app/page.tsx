@@ -39,6 +39,17 @@ function Dashboard() {
   const currentChain = getChain(displayChainId);
   const activeAddress = isSuiChain(displayChainId) ? suiAddress : address;
 
+  // Keep the "Switch chain target" selector in sync with the wallet's current
+  // chain. Without this it stays pinned to CHAINS[0] (Sepolia) even after the
+  // wallet reports a different network, which is confusing UX.
+  useEffect(() => {
+    if (chainId && chainId !== selectedChain) {
+      setSelectedChain(chainId);
+    }
+    // selectedChain intentionally excluded — we only react to wallet changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chainId]);
+
   useEffect(() => {
     let mounted = true;
     if (!activeAddress || !displayChainId) {
