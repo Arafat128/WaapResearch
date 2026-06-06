@@ -1,5 +1,6 @@
 import { formatUnits, isAddress, parseUnits } from "viem";
 import { CHAINS, getLifiChainId, getNativeTokenAddress, isSuiChain, SUI_NATIVE_TOKEN_ADDRESS } from "@/lib/chains";
+import { assertAllowedLifiRouter } from "@/lib/lifi-routers";
 import type { LifiQuote, LifiQuoteRequest, TokenOption } from "@/types";
 
 const NATIVE_VALUE_BUFFER_BPS = 50n; // 0.5% headroom over user amount to cover wei rounding
@@ -43,7 +44,12 @@ export async function fetchQuote(request: LifiQuoteRequest): Promise<LifiQuote> 
   try {
     response = await fetch("/api/lifi/quote", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        // M5: simple-CSRF defeater. Browsers will not let cross-origin HTML
+        // forms set custom headers, so requiring this rejects form-based CSRF.
+        "x-requested-with": "fetch"
+      },
       body: JSON.stringify({
         ...request,
         fromAmount: parseUnits(request.amount, request.fromTokenDecimals ?? 18).toString()
@@ -87,6 +93,12 @@ export function assertSafeEvmTxRequest(
     fromTokenAddress: string;
     nativeTokenAddress: string;
     chainId: number;
+    /** Raw user-entered amount string (e.g. "0.1"). When provided, the quote's
+     *  fromAmount is verified to equal `parseUnits(userAmount, decimals)` so a
+     *  malicious quote can't inflate the amount past what the user typed. */
+    userAmount?: string;
+    /** Decimals used when re-parsing userAmount. */
+    userAmountDecimals?: number;
   }
 ): void {
   const tx = quote.transactionRequest;
@@ -143,6 +155,63 @@ export function assertSafeEvmTxRequest(
         "Quote tries to send more native value than the amount you entered. Refusing to sign — refresh the quote."
       );
     }
+  }
+
+  // M1: verify the quote's fromAmount actually matches what the user typed.
+  // Without this, a malicious quote could enlarge fromAmount and the approval
+  // flow (which uses BigInt(quote.fromAmount) as the spend cap) would grant a
+  // larger allowance than the user agreed to.
+  if (context.userAmount && context.userAmountDecimals !== undefined) {
+    try {
+      const expected = parseUnits(context.userAmount, context.userAmountDecimals);
+      if (expected !== fromAmount) {
+        throw new Error(
+          "Quote fromAmount does not match the amount you entered. Refusing to sign — refresh the quote."
+        );
+      }
+    } catch (err) {
+      if (err instanceof Error && err.message.includes("Refusing")) throw err;
+      throw new Error("Could not verify the quote's amount against the form input. Refresh the quote.");
+    }
+  }
+}
+
+/**
+ * R1: assert that an ERC20 approval's spender is a known LI.FI router for
+ * this chain. Run this *before* the approve tx is signed, so a poisoned
+ * quote can't trick the user into granting allowance to an attacker contract.
+ */
+export function assertSafeApproval(chainId: number, spender: string | undefined): void {
+  assertAllowedLifiRouter(chainId, spender);
+}
+
+/**
+ * R2: light sanity check on a Sui transaction returned by LI.FI. Sui tx bytes
+ * are opaque BCS; the WaaP popup can't show a useful preview. At minimum we
+ * decode them with @mysten/sui's Transaction parser and verify the sender
+ * (when present) matches the connected user. Anything beyond that requires
+ * full BCS introspection — out of scope here but worth following up.
+ */
+export async function assertSafeSuiTxBytes(
+  bytes: Uint8Array,
+  context: { suiAddress: string }
+): Promise<void> {
+  if (!bytes || bytes.length === 0) {
+    throw new Error("Sui route returned empty transaction bytes. Refresh the quote.");
+  }
+  const { Transaction } = await import("@mysten/sui/transactions");
+  let parsed: ReturnType<typeof Transaction.from>;
+  try {
+    parsed = Transaction.from(bytes);
+  } catch {
+    throw new Error("Sui route bytes failed to parse. Refusing to sign.");
+  }
+  const data = parsed.getData();
+  const declaredSender = data.sender ?? undefined;
+  if (declaredSender && declaredSender.toLowerCase() !== context.suiAddress.toLowerCase()) {
+    throw new Error(
+      `Sui transaction declares sender ${declaredSender} but the connected account is ${context.suiAddress}. Refusing to sign.`
+    );
   }
 }
 

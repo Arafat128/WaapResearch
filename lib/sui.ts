@@ -3,6 +3,7 @@ import { getFullnodeUrl, SuiClient } from "@mysten/sui/client";
 import { Transaction } from "@mysten/sui/transactions";
 import { isValidSuiAddress } from "@mysten/sui/utils";
 import { formatUnits, parseUnits } from "viem";
+import { assertSafeSuiTxBytes } from "@/lib/lifi";
 import { beginWaapSigningUi, finishWaapSigningUi, setWaapModalAllowed, showWaapLoginModal } from "@/lib/waap";
 import type { LifiQuote } from "@/types";
 
@@ -116,6 +117,8 @@ export async function executeLifiSuiQuote(params: {
   const wallet = await getWaapSuiWallet();
   await wallet.switchChain({ chain: SUI_CHAIN });
   const transaction = extractSuiTransactionBytes(params.quote);
+  // R2: decode and sanity-check the Sui tx bytes before signing.
+  await assertSafeSuiTxBytes(transaction, { suiAddress: params.account.address });
   const { requestId, visibilityKeeper } = beginWaapSigningUi();
 
   try {
@@ -170,12 +173,15 @@ function createSuiClient() {
 function extractSuiTransactionBytes(quote: LifiQuote) {
   const tx = quote.transactionRequest;
   if (!tx) throw new Error("LI.FI did not return Sui transaction data.");
+  // L2: scope the recursive search to `transactionRequest` only — searching
+  // the entire raw quote could surface a "data"/"bytes" field from metadata
+  // and accidentally sign the wrong bytes.
   const raw =
     tx.txBytes ??
     tx.transaction ??
     tx.bytes ??
     (typeof tx.data === "string" ? tx.data : undefined) ??
-    findNestedTransactionBytes(quote.raw);
+    findNestedTransactionBytes(tx as unknown as Record<string, unknown>);
 
   if (!raw) {
     throw new Error("LI.FI returned a Sui route, but no executable transaction bytes were found.");

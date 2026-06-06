@@ -1,9 +1,45 @@
 import type { NextConfig } from "next";
 
-// M1: Baseline security headers for every response. `frame-ancestors` blocks
-// clickjacking of the WaaP wallet confirmation flow; `connect-src` whitelists
-// the only outbound origins we actually use.
+// M1: Baseline security headers for every response.
+//
+// `frame-src` and `connect-src` whitelist the full set of origins that the
+// WaaP / Silk wallet stack uses at runtime (sourced from
+// @human.tech/waap-constants). Without all of these the wallet iframe shows
+// "This content is blocked" and login pings time out.
 // L1: also strip the X-Powered-By header.
+const waapFrameOrigins = [
+  "https://silksecure.net", // Silk wallet UI iframe
+  "https://waap.xyz",
+  "https://*.waap.xyz",
+  "https://*.silk.sc",
+  "https://*.silkwallet.net"
+];
+
+// M4: narrow these from broad PaaS wildcards to the exact subdomains the
+// WaaP/Silk SDK actually contacts (sourced from @human.tech/waap-constants).
+// If the SDK ever changes hosts, the browser CSP violation will tell us.
+const waapConnectOrigins = [
+  "https://silksecure.net",
+  "https://waap.xyz",
+  "https://*.waap.xyz",
+  "https://*.silk.sc",
+  "https://server.silkwallet.net",
+  "https://main.silk-protector.com",
+  "https://lbr.silk-protector-microservice-pe.com",
+  "https://lbr.silk-protector-microservice-km.com",
+  "https://gastank.app-76797b4474a8.enclave.evervault.com",
+  "https://gastank-staging.app-688cba025011.enclave.evervault.com",
+  "https://prod-waap-ws-relay.fly.dev",
+  "wss://prod-waap-ws-relay.fly.dev"
+];
+
+const suiOrigins = [
+  "https://*.sui.io",
+  "wss://*.sui.io",
+  "https://fullnode.mainnet.sui.io",
+  "https://fullnode.testnet.sui.io"
+];
+
 const securityHeaders = [
   {
     key: "Content-Security-Policy",
@@ -15,8 +51,10 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https:",
       "font-src 'self' data:",
-      "connect-src 'self' https://li.quest https://*.waap.xyz https://*.sui.io wss://*.sui.io https://fullnode.mainnet.sui.io https://fullnode.testnet.sui.io",
-      "frame-src 'self' https://*.waap.xyz",
+      `connect-src 'self' https://li.quest ${waapConnectOrigins.join(" ")} ${suiOrigins.join(" ")}`,
+      `frame-src 'self' ${waapFrameOrigins.join(" ")}`,
+      `child-src 'self' ${waapFrameOrigins.join(" ")}`,
+      "worker-src 'self' blob:",
       "frame-ancestors 'self'",
       "form-action 'self'",
       "base-uri 'self'",
@@ -30,7 +68,7 @@ const securityHeaders = [
     key: "Permissions-Policy",
     value: "geolocation=(), microphone=(), camera=(), payment=(), usb=()"
   },
-  { key: "Cross-Origin-Opener-Policy", value: "same-origin" }
+  { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" }
 ];
 
 const nextConfig: NextConfig = {

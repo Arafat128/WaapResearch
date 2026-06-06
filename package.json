@@ -10,30 +10,37 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@human.tech/waap-sdk": "latest",
-    "@mysten/sui": "^1.45.2",
-    "@radix-ui/react-slot": "latest",
-    "class-variance-authority": "latest",
-    "clsx": "latest",
-    "lucide-react": "latest",
-    "next": "latest",
-    "qrcode.react": "latest",
-    "react": "latest",
-    "react-dom": "latest",
-    "react-hook-form": "latest",
-    "tailwind-merge": "latest",
-    "viem": "latest"
+    "@human.tech/waap-sdk": "2.0.0",
+    "@mysten/sui": "1.45.2",
+    "@radix-ui/react-slot": "1.2.4",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "lucide-react": "1.14.0",
+    "next": "16.2.6",
+    "qrcode.react": "4.2.0",
+    "react": "19.2.5",
+    "react-dom": "19.2.5",
+    "react-hook-form": "7.75.0",
+    "tailwind-merge": "3.5.0",
+    "viem": "2.48.7"
   },
   "devDependencies": {
-    "@types/node": "latest",
-    "@types/react": "latest",
-    "@types/react-dom": "latest",
-    "@eslint/eslintrc": "latest",
-    "autoprefixer": "latest",
-    "eslint": "^9.39.1",
-    "eslint-config-next": "latest",
-    "postcss": "latest",
-    "tailwindcss": "^3.4.17",
-    "typescript": "^5.9.3"
+    "@eslint/eslintrc": "3.3.5",
+    "@types/node": "25.6.0",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "autoprefixer": "10.5.0",
+    "eslint": "9.39.4",
+    "eslint-config-next": "16.2.6",
+    "postcss": "8.5.13",
+    "tailwindcss": "3.4.19",
+    "typescript": "5.9.3"
+  },
+  "pnpm": {
+    "overrides": {
+      "axios": "1.15.2",
+      "postcss": "8.5.13",
+      "valibot": "1.3.1"
+    }
   }
 }

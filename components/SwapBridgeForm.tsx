@@ -11,7 +11,7 @@ import { ChainSelector } from "@/components/ChainSelector";
 import { TokenSelector } from "@/components/TokenSelector";
 import { useWaap } from "@/components/WaapProvider";
 import { approveErc20Spend, readErc20Allowance, validateAddress } from "@/lib/erc20";
-import { assertSafeEvmTxRequest, fetchQuote } from "@/lib/lifi";
+import { assertSafeApproval, assertSafeEvmTxRequest, assertSafeSuiTxBytes, fetchQuote } from "@/lib/lifi";
 import {
   DEFAULT_SLIPPAGE,
   explorerTxUrl,
@@ -180,11 +180,14 @@ export function SwapBridgeForm({ defaultChainId }: { defaultChainId: number }) {
         await switchChain(fromChain);
         await ensureErc20Approval(fromAddress, activeQuote);
         if (!tx.to || !tx.data) throw new Error("LI.FI did not return executable EVM transaction data.");
-        // H3: refuse to sign if LI.FI's tx.to / tx.value do not match the previewed quote.
+        // H3 + M1: refuse to sign if LI.FI's tx.to / tx.value / fromAmount do
+        // not match the previewed quote and the user's typed amount.
         assertSafeEvmTxRequest(activeQuote, {
           fromTokenAddress: fromToken,
           nativeTokenAddress: getNativeTokenAddress(fromChain),
-          chainId: fromChain
+          chainId: fromChain,
+          userAmount: amount,
+          userAmountDecimals: fromTokenMeta?.decimals ?? 18
         });
         const value = normalizeTxValue(tx.value);
         setStatus("Sending EVM route transaction to WaaP...");
@@ -262,6 +265,8 @@ export function SwapBridgeForm({ defaultChainId }: { defaultChainId: number }) {
     if (!activeQuote.approvalAddress || !validateAddress(activeQuote.approvalAddress)) {
       throw new Error("LI.FI route requires ERC20 spending, but no valid approval address was returned.");
     }
+    // R1: refuse to approve any spender that's not a known LI.FI router.
+    assertSafeApproval(fromChain, activeQuote.approvalAddress);
     const required = BigInt(activeQuote.fromAmount);
     setStatus("Checking ERC20 allowance...");
     const allowance = await readErc20Allowance(fromToken, owner, activeQuote.approvalAddress);

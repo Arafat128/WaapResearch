@@ -75,18 +75,21 @@ function cleanupBuckets(now: number) {
 }
 
 /**
- * H4: simple CSRF / abuse mitigation — refuse cross-origin POSTs from sites
- * that aren't us. Returns null when allowed, a 403 response otherwise.
+ * H4 + M5: CSRF / abuse mitigation. Reject browser cross-origin requests AND
+ * require a custom `X-Requested-With: fetch` header on POSTs to defeat the
+ * subset of CSRF that can be issued without an Origin header (simple HTML
+ * form posts, server-to-server callers without scripts).
  *
- * Same-origin browser requests omit the Origin header on GETs; we only check
- * when Origin is present so legitimate same-origin fetches still pass.
+ * Browsers that send the request will also send Origin or Referer; we
+ * require at least one of them to be set and match the site origin. If
+ * neither is set, we fall through to the X-Requested-With check.
  */
 export function checkSameOrigin(request: NextRequest) {
   const origin = request.headers.get("origin");
-  if (!origin) return null;
+  const referer = request.headers.get("referer");
+  const selfOrigin = request.nextUrl.origin;
 
   const allowed = new Set<string>();
-  const selfOrigin = request.nextUrl.origin;
   if (selfOrigin) allowed.add(selfOrigin);
 
   const envAllow = process.env.ALLOWED_ORIGINS;
@@ -97,10 +100,36 @@ export function checkSameOrigin(request: NextRequest) {
     }
   }
 
-  if (allowed.has(origin)) return null;
+  if (origin) {
+    if (!allowed.has(origin)) {
+      return NextResponse.json({ message: "Cross-origin request blocked." }, { status: 403 });
+    }
+    return null;
+  }
 
-  return NextResponse.json(
-    { message: "Cross-origin request blocked." },
-    { status: 403 }
-  );
+  if (referer) {
+    let refererOrigin: string | null = null;
+    try {
+      refererOrigin = new URL(referer).origin;
+    } catch {
+      refererOrigin = null;
+    }
+    if (!refererOrigin || !allowed.has(refererOrigin)) {
+      return NextResponse.json({ message: "Cross-origin request blocked." }, { status: 403 });
+    }
+    return null;
+  }
+
+  // No Origin and no Referer. Block POST/PUT/PATCH/DELETE unless they carry
+  // our custom client header — simple HTML <form> posts cannot set it.
+  const method = request.method.toUpperCase();
+  if (method !== "GET" && method !== "HEAD") {
+    if (request.headers.get("x-requested-with") !== "fetch") {
+      return NextResponse.json(
+        { message: "Cross-origin request blocked: missing client signature." },
+        { status: 403 }
+      );
+    }
+  }
+  return null;
 }
