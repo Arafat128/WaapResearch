@@ -184,7 +184,10 @@ button:hover svg {
   gap: 1rem;
 }
 
-/* Background sparkle drift — restored after the pet CSS purge removed it. */
+/* Background sparkle drift — restored after the pet CSS purge removed it.
+   Each of the four radial-gradient layers gets its own trajectory so the
+   dots don't all drift in the same direction. Tiles are 11–19rem so the
+   end positions just continue the loop seamlessly. */
 @keyframes waap-sparkle-drift {
   0% {
     background-position:
@@ -193,12 +196,33 @@ button:hover svg {
       2rem 10rem,
       0 0;
   }
+  25% {
+    background-position:
+      11rem 9rem,    /* cyan: drifts down-right */
+      4rem 12rem,    /* gold: drifts down-left */
+      9rem 4rem,     /* pink: drifts up-right */
+      -3rem 6rem;    /* white: drifts down-left */
+  }
+  50% {
+    background-position:
+      18rem 14rem,
+      -2rem 18rem,
+      15rem -4rem,
+      -8rem 11rem;
+  }
+  75% {
+    background-position:
+      10rem 19rem,
+      6rem 9rem,
+      19rem 6rem,
+      -4rem 4rem;
+  }
   100% {
     background-position:
-      17rem 18rem,
-      26rem 20rem,
-      21rem 29rem,
-      11rem 11rem;
+      4rem 5rem,
+      9rem 3rem,
+      2rem 10rem,
+      0 0;
   }
 }
 
