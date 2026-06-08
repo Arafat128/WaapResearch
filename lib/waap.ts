@@ -23,6 +23,10 @@ export function initWaapOnce() {
 
   if (!waapInitPromise) {
     const result = initWaaP({
+      // referralCode MUST stay a top-level sibling of config/project — if it
+      // ends up nested inside `config` Human Wallet won't register the
+      // attribution. Override via NEXT_PUBLIC_WAAP_REFERRAL_CODE at deploy.
+      referralCode: process.env.NEXT_PUBLIC_WAAP_REFERRAL_CODE ?? "boPYvnaw6J5gHgbv",
       config: {
         authenticationMethods: ["email", "phone", "social"],
         allowedSocials: ["google", "twitter", "discord"],

@@ -26,6 +26,9 @@ export function initWaapSuiOnce() {
 
   if (!suiInitPromise) {
     const wallet = initWaaPSui({
+      // Top-level sibling — same attribution code as the EVM init in lib/waap.ts.
+      // See that file for why nesting under `config` breaks attribution.
+      referralCode: process.env.NEXT_PUBLIC_WAAP_REFERRAL_CODE ?? "boPYvnaw6J5gHgbv",
       config: {
         authenticationMethods: ["email", "phone", "social"],
         allowedSocials: ["google", "twitter", "discord"],
