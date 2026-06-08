@@ -18,6 +18,7 @@ import { TransactionHistory } from "@/components/TransactionHistory";
 import { SettingsPanel } from "@/components/SettingsPanel";
 import { WalletBalances } from "@/components/WalletBalances";
 import { MissionGuardrails } from "@/components/MissionGuardrails";
+import { LoginCounter } from "@/components/LoginCounter";
 import { CHAINS, explorerAddressUrl, getChain, isSuiChain, SUI_MAINNET_CHAIN_ID } from "@/lib/chains";
 import { getNativeBalance } from "@/lib/waap";
 import { getSuiBalances } from "@/lib/sui";
@@ -26,6 +27,7 @@ import { shortAddress } from "@/lib/utils";
 export default function Home() {
   return (
     <WaapProvider>
+      <LoginCounter />
       <Dashboard />
     </WaapProvider>
   );
