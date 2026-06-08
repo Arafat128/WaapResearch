@@ -186,13 +186,12 @@ export function RepeatActionTool({ defaultChainId }: { defaultChainId: number })
           } else {
             if (!tx.to || !tx.data) throw new Error("LI.FI did not return executable EVM transaction data.");
             // H3 + M1: refuse to sign if LI.FI's tx.to / tx.value / fromAmount
-            // do not match the previewed quote and the user's typed amount.
+            // do not match the previewed quote and the snapshot taken at fetch.
             assertSafeEvmTxRequest(activeQuote, {
               fromTokenAddress: fromToken,
               nativeTokenAddress: getNativeTokenAddress(fromChain),
               chainId: fromChain,
-              userAmount: amount,
-              userAmountDecimals: fromTokenMeta?.decimals ?? 18
+              userAmount: amount
             });
             hash = await sendWaapTransaction({
               from: fromAddress,

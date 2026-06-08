@@ -181,13 +181,13 @@ export function SwapBridgeForm({ defaultChainId }: { defaultChainId: number }) {
         await ensureErc20Approval(fromAddress, activeQuote);
         if (!tx.to || !tx.data) throw new Error("LI.FI did not return executable EVM transaction data.");
         // H3 + M1: refuse to sign if LI.FI's tx.to / tx.value / fromAmount do
-        // not match the previewed quote and the user's typed amount.
+        // not match the previewed quote, and verify the form amount hasn't
+        // drifted from the snapshot captured at quote time.
         assertSafeEvmTxRequest(activeQuote, {
           fromTokenAddress: fromToken,
           nativeTokenAddress: getNativeTokenAddress(fromChain),
           chainId: fromChain,
-          userAmount: amount,
-          userAmountDecimals: fromTokenMeta?.decimals ?? 18
+          userAmount: amount
         });
         const value = normalizeTxValue(tx.value);
         setStatus("Sending EVM route transaction to WaaP...");
@@ -206,6 +206,10 @@ export function SwapBridgeForm({ defaultChainId }: { defaultChainId: number }) {
       upsertHistory({ ...pending, hash, explorerUrl: explorerTxUrl(fromChain, hash), status: finalStatus });
       setStatus(`${mode} ${finalStatus}: ${hash}`);
     } catch (error) {
+      // Surface the real error to DevTools so users (and us) can diagnose why
+      // the popup never opened — defense checks failing, chain switch refused,
+      // or LI.FI returning bad data all land here.
+      console.error("[SwapBridge] execute failed:", error);
       upsertHistory({
         id,
         type: mode,
@@ -454,9 +458,39 @@ export function SwapBridgeForm({ defaultChainId }: { defaultChainId: number }) {
           <input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} />
           I reviewed this route, slippage, fees, and destination chain before signing.
         </label>
-        {status && <p className="text-sm text-muted-foreground">{status}</p>}
+        {status && <StatusBanner message={status} />}
       </CardContent>
     </Card>
+  );
+}
+
+function StatusBanner({ message }: { message: string }) {
+  // Heuristic classification: anything that mentions "failed", "refuse",
+  // "invalid", "exceed", "mismatch", or "error" we treat as an error and
+  // colour red so the user can't miss it.
+  const lower = message.toLowerCase();
+  const isError =
+    lower.includes("fail") ||
+    lower.includes("refus") ||
+    lower.includes("invalid") ||
+    lower.includes("exceed") ||
+    lower.includes("mismatch") ||
+    lower.includes("error") ||
+    lower.includes("cannot") ||
+    lower.includes("not match") ||
+    lower.includes("refresh") ||
+    lower.includes("connect ") ||
+    lower.includes("blocked");
+  const isSuccess = lower.includes("confirmed") || lower.includes("submitted");
+  const className = isError
+    ? "rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm font-medium text-red-200"
+    : isSuccess
+    ? "rounded-md border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm font-medium text-emerald-200"
+    : "rounded-md border border-sky-400/30 bg-sky-500/10 p-3 text-sm font-medium text-sky-100";
+  return (
+    <div className={className} role={isError ? "alert" : undefined} aria-live="polite">
+      {message}
+    </div>
   );
 }
 

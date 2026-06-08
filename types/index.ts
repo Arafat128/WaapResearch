@@ -61,6 +61,11 @@ export type LifiQuote = {
   feeCostUsd?: string;
   estimatedTime?: number;
   approvalAddress?: string;
+  /** Snapshot of what the user typed into the form at the moment this quote
+   *  was fetched. Used by assertSafeEvmTxRequest to detect both stale quotes
+   *  (form changed after fetch) and inflated-amount attacks (quote.fromAmount
+   *  not equal to parseUnits(snapshot.amount, snapshot.decimals)). */
+  userInputs?: { amount: string; decimals: number };
   transactionRequest?: {
     to?: string;
     data?: Hex | string;

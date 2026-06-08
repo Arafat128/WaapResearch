@@ -64,7 +64,15 @@ export async function fetchQuote(request: LifiQuoteRequest): Promise<LifiQuote> 
     throw new Error(payload?.message ?? "No LI.FI route is available for this action.");
   }
 
-  return normalizeQuote(payload);
+  const quote = normalizeQuote(payload);
+  // Snapshot user inputs at the moment the quote was issued. assertSafeEvmTxRequest
+  // uses these (instead of live form state) so that a fromTokenMeta state update
+  // between fetch and execute doesn't trigger a false-positive amount mismatch.
+  quote.userInputs = {
+    amount: request.amount,
+    decimals: request.fromTokenDecimals ?? 18
+  };
+  return quote;
 }
 
 export function buildLifiQuoteUrl(params: URLSearchParams) {
@@ -93,12 +101,9 @@ export function assertSafeEvmTxRequest(
     fromTokenAddress: string;
     nativeTokenAddress: string;
     chainId: number;
-    /** Raw user-entered amount string (e.g. "0.1"). When provided, the quote's
-     *  fromAmount is verified to equal `parseUnits(userAmount, decimals)` so a
-     *  malicious quote can't inflate the amount past what the user typed. */
+    /** Current live form amount. Compared against `quote.userInputs.amount`
+     *  to detect a stale quote (user changed the form after fetching). */
     userAmount?: string;
-    /** Decimals used when re-parsing userAmount. */
-    userAmountDecimals?: number;
   }
 ): void {
   const tx = quote.transactionRequest;
@@ -157,21 +162,28 @@ export function assertSafeEvmTxRequest(
     }
   }
 
-  // M1: verify the quote's fromAmount actually matches what the user typed.
-  // Without this, a malicious quote could enlarge fromAmount and the approval
-  // flow (which uses BigInt(quote.fromAmount) as the spend cap) would grant a
-  // larger allowance than the user agreed to.
-  if (context.userAmount && context.userAmountDecimals !== undefined) {
+  // M1: defend against malicious LI.FI inflation of `fromAmount`. We compare
+  // against the SNAPSHOT taken at quote time (set inside `fetchQuote`) — that
+  // way a UI-state change of fromTokenMeta between fetch and execute can't
+  // cause a false positive.
+  if (quote.userInputs) {
     try {
-      const expected = parseUnits(context.userAmount, context.userAmountDecimals);
+      const expected = parseUnits(quote.userInputs.amount, quote.userInputs.decimals);
       if (expected !== fromAmount) {
         throw new Error(
-          "Quote fromAmount does not match the amount you entered. Refusing to sign — refresh the quote."
+          "Quote fromAmount does not match the snapshot of what you entered. Refusing to sign — refresh the quote."
         );
       }
     } catch (err) {
       if (err instanceof Error && err.message.includes("Refusing")) throw err;
-      throw new Error("Could not verify the quote's amount against the form input. Refresh the quote.");
+      throw new Error("Could not verify the quote's amount against the snapshot. Refresh the quote.");
+    }
+    // Separately: if the live form amount has drifted from the snapshot, the
+    // user changed their mind after the quote — fail fast and ask for a refresh.
+    if (context.userAmount && context.userAmount !== quote.userInputs.amount) {
+      throw new Error(
+        "Amount in the form has changed since the quote was fetched. Refresh the quote before executing."
+      );
     }
   }
 }
