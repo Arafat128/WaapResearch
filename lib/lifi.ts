@@ -149,15 +149,36 @@ export function assertSafeEvmTxRequest(
   }
 
   if (!isNativeSource) {
-    // ERC20 swaps must not move native value.
-    if (txValue > 0n) {
-      throw new Error("Quote unexpectedly moves native funds for an ERC20 swap. Refusing to sign.");
+    // ERC20 swaps must not move native value... except the user must still
+    // pay native bridge/messaging fees, which LI.FI puts in tx.value even
+    // when the bridged asset is an ERC20. Allow tx.value up to the quoted
+    // native overhead (with a small rounding buffer); reject anything beyond.
+    let nativeOverhead = 0n;
+    try {
+      nativeOverhead = quote.estimatedNativeOverhead ? BigInt(quote.estimatedNativeOverhead) : 0n;
+    } catch {
+      nativeOverhead = 0n;
+    }
+    const erc20Allowed = nativeOverhead + (nativeOverhead * NATIVE_VALUE_BUFFER_BPS) / 10_000n;
+    if (txValue > erc20Allowed) {
+      throw new Error(
+        "Quote tries to send more native value than the fees LI.FI declared. Refusing to sign — refresh the quote."
+      );
     }
   } else if (fromAmount > 0n) {
-    const allowed = fromAmount + (fromAmount * NATIVE_VALUE_BUFFER_BPS) / 10_000n;
+    // Native-source route: allow tx.value = fromAmount + bridge/protocol/gas
+    // fees that LI.FI itself quoted as native, + a small rounding buffer.
+    let nativeOverhead = 0n;
+    try {
+      nativeOverhead = quote.estimatedNativeOverhead ? BigInt(quote.estimatedNativeOverhead) : 0n;
+    } catch {
+      nativeOverhead = 0n;
+    }
+    const base = fromAmount + nativeOverhead;
+    const allowed = base + (base * NATIVE_VALUE_BUFFER_BPS) / 10_000n;
     if (txValue > allowed) {
       throw new Error(
-        "Quote tries to send more native value than the amount you entered. Refusing to sign — refresh the quote."
+        `Quote tries to send ${txValue} wei, more than fromAmount (${fromAmount}) + declared native fees (${nativeOverhead}). Refusing to sign — refresh the quote.`
       );
     }
   }
@@ -248,9 +269,10 @@ function normalizeQuote(raw: Record<string, unknown>): LifiQuote {
   const fromAmount = String(action?.fromAmount ?? "0");
   const toAmount = String(estimate?.toAmount ?? "0");
   const minAmount = String(estimate?.toAmountMin ?? toAmount);
-  const gasCosts = estimate?.gasCosts as Array<{ amountUSD?: string }> | undefined;
-  const feeCosts = estimate?.feeCosts as Array<{ amountUSD?: string }> | undefined;
+  const gasCosts = estimate?.gasCosts as Array<{ amountUSD?: string; amount?: string; token?: { address?: string } }> | undefined;
+  const feeCosts = estimate?.feeCosts as Array<{ amountUSD?: string; amount?: string; token?: { address?: string }; included?: boolean }> | undefined;
   const approvalAddress = typeof estimate?.approvalAddress === "string" ? estimate.approvalAddress : undefined;
+  const estimatedNativeOverhead = sumNativeFees(feeCosts, gasCosts).toString();
 
   return {
     id: String(raw.id ?? crypto.randomUUID()),
@@ -264,6 +286,7 @@ function normalizeQuote(raw: Record<string, unknown>): LifiQuote {
     feeCostUsd: sumUsd(feeCosts),
     estimatedTime: typeof estimate?.executionDuration === "number" ? estimate.executionDuration : undefined,
     approvalAddress,
+    estimatedNativeOverhead,
     transactionRequest: tx
       ? {
           ...tx,
@@ -291,6 +314,45 @@ function formatMaybe(value: string, decimals: number) {
 function sumUsd(costs?: Array<{ amountUSD?: string }>) {
   if (!costs?.length) return undefined;
   return costs.reduce((sum, cost) => sum + Number(cost.amountUSD ?? 0), 0).toFixed(2);
+}
+
+const NATIVE_TOKEN_ADDRESSES = new Set([
+  "0x0000000000000000000000000000000000000000",
+  // LI.FI / 1inch placeholder for native token
+  "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+]);
+
+/**
+ * Sum every cost item denominated in the source chain's NATIVE token. These
+ * are bridge messaging fees, protocol fees, and Tx gas estimates that LI.FI
+ * expects the user to pay on top of `fromAmount` via `tx.value`. The result
+ * becomes the legitimate upper bound on how much tx.value may exceed
+ * fromAmount in assertSafeEvmTxRequest.
+ *
+ * We include `included: true` fee items as well — different bridges set that
+ * flag inconsistently, and it's safer to over-estimate the allowed headroom
+ * than to reject a valid route.
+ */
+function sumNativeFees(
+  feeCosts?: Array<{ amount?: string; token?: { address?: string } }>,
+  gasCosts?: Array<{ amount?: string; token?: { address?: string } }>
+): bigint {
+  let total = 0n;
+  const buckets = [feeCosts, gasCosts];
+  for (const list of buckets) {
+    if (!list) continue;
+    for (const item of list) {
+      const addr = item.token?.address?.toLowerCase();
+      if (!addr || !NATIVE_TOKEN_ADDRESSES.has(addr)) continue;
+      if (!item.amount) continue;
+      try {
+        total += BigInt(item.amount);
+      } catch {
+        // ignore malformed entries
+      }
+    }
+  }
+  return total;
 }
 
 function fallbackTokens(chainId: number): TokenOption[] {

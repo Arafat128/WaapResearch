@@ -66,6 +66,11 @@ export type LifiQuote = {
    *  (form changed after fetch) and inflated-amount attacks (quote.fromAmount
    *  not equal to parseUnits(snapshot.amount, snapshot.decimals)). */
   userInputs?: { amount: string; decimals: number };
+  /** Total native-token fees LI.FI itself declared in the estimate (bridge
+   *  messaging fees, included or otherwise). Stored as a base-unit decimal
+   *  string. Used as the upper bound on how much `tx.value` may legitimately
+   *  exceed `fromAmount` for native-source routes. */
+  estimatedNativeOverhead?: string;
   transactionRequest?: {
     to?: string;
     data?: Hex | string;
