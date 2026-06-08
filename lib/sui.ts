@@ -33,7 +33,7 @@ export function initWaapSuiOnce() {
         showSecured: true
       },
       project: {
-        name: "Mehidy's Waap Research Lab",
+        name: "Mehidy's Waap Tools",
         entryTitle: "Log in to WaaP Action Hub"
       },
       useStaging: false

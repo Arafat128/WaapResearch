@@ -3,7 +3,7 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Mehidy's Waap Research Lab",
+  title: "Mehidy's Waap Tools",
   description: "A secure Web3 dashboard for WaaP-powered send, receive, swap, bridge, and repeat actions."
 };
 

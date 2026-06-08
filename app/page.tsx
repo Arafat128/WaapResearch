@@ -79,18 +79,16 @@ function Dashboard() {
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
       <header className="grid gap-4">
-        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-          <div>
-            <div className="mb-3 flex flex-wrap gap-2">
-              <Badge variant="success">Testnet-first</Badge>
-              <Badge variant="warning">Mainnet clearly labeled</Badge>
-              <Badge variant="muted">No seed phrases</Badge>
-            </div>
-            <h1 className="text-3xl font-semibold tracking-normal sm:text-4xl">Mehidy&apos;s Waap Research Lab</h1>
-            <p className="mt-2 max-w-3xl text-sm text-muted-foreground sm:text-base">
-              Connect with WaaP, preview every action, and run controlled token workflows with clear risk checks.
-            </p>
+        <div className="flex flex-col items-center gap-3 text-center">
+          <div className="flex flex-wrap justify-center gap-2">
+            <Badge variant="success">Testnet-first</Badge>
+            <Badge variant="warning">Mainnet clearly labeled</Badge>
+            <Badge variant="muted">No seed phrases</Badge>
           </div>
+          <h1 className="text-3xl font-semibold tracking-normal sm:text-4xl">Mehidy&apos;s Waap Tools</h1>
+          <p className="mx-auto max-w-3xl text-sm text-muted-foreground sm:text-base">
+            Connect with WaaP, preview every action, and run controlled token workflows with clear risk checks.
+          </p>
         </div>
         <ConnectWalletButton />
         <MissionGuardrails />
