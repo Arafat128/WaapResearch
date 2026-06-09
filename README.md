@@ -81,7 +81,6 @@ Local URL: http://localhost:3000
 If PowerShell says `node` is not recognized, use the bundled helper script:
 
 ```powershell
-cd D:\Codex\Waap
 powershell -ExecutionPolicy Bypass -File .\scripts\dev.ps1
 ```
 
