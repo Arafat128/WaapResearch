@@ -225,12 +225,6 @@ export async function getNativeBalance(address: string) {
   });
 }
 
-export async function getGasPrice() {
-  const provider = getWaapProvider();
-  const hex = await provider.request<Hex>({ method: "eth_gasPrice" });
-  return BigInt(hex);
-}
-
 export async function switchChain(chainId: number) {
   const provider = getWaapProvider();
   await provider.request({

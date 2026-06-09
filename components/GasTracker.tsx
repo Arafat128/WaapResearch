@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useWaap } from "@/components/WaapProvider";
 import { getChain, isSuiChain } from "@/lib/chains";
-import { getGasPrice } from "@/lib/waap";
 
 const POLL_MS = 20_000;
 
@@ -27,15 +26,27 @@ export function GasTracker() {
   const sui = chainId ? isSuiChain(chainId) : false;
 
   const load = useCallback(async () => {
-    if (!address || !chainId || isSuiChain(chainId)) return;
+    if (!chainId || isSuiChain(chainId)) return;
     try {
-      const wei = await getGasPrice();
-      setGwei(Number(formatUnits(wei, 9)));
+      const res = await fetch(`/api/gas?chainId=${chainId}`, {
+        cache: "no-store",
+        headers: { "x-requested-with": "fetch" }
+      });
+      if (!res.ok) {
+        setStatus("Could not read gas price for this network.");
+        return;
+      }
+      const data = (await res.json()) as { gasPriceWei?: string };
+      if (!data.gasPriceWei) {
+        setStatus("Could not read gas price for this network.");
+        return;
+      }
+      setGwei(Number(formatUnits(BigInt(data.gasPriceWei), 9)));
       setStatus(undefined);
     } catch {
       setStatus("Could not read gas price for this network.");
     }
-  }, [address, chainId]);
+  }, [chainId]);
 
   useEffect(() => {
     setGwei(null);
