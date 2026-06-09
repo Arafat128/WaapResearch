@@ -154,13 +154,13 @@ function Dashboard() {
       </Card>
 
       <section className="dashboard-grid">
-        <ReceiveCard chainId={selectedChain} onChainChange={setSelectedChain} />
-        <SendForm defaultChainId={selectedChain} />
+        <PortfolioCard />
+        <GasTracker />
       </section>
 
       <section className="dashboard-grid">
-        <PortfolioCard />
-        <GasTracker />
+        <ReceiveCard chainId={selectedChain} onChainChange={setSelectedChain} />
+        <SendForm defaultChainId={selectedChain} />
       </section>
 
       <AddressBook />
