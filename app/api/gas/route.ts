@@ -28,21 +28,20 @@ const RPCS_BY_CHAIN: Record<number, string[]> = {
   421614: ["https://sepolia-rollup.arbitrum.io/rpc", "https://arbitrum-sepolia-rpc.publicnode.com"]
 };
 
-async function readGasPrice(rpc: string): Promise<string | null> {
-  try {
-    const res = await fetch(rpc, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_gasPrice", params: [] }),
-      cache: "no-store",
-      signal: AbortSignal.timeout(6000)
-    });
-    if (!res.ok) return null;
-    const json = (await res.json()) as { result?: string };
-    return typeof json.result === "string" && json.result.startsWith("0x") ? json.result : null;
-  } catch {
-    return null;
+async function readGasPrice(rpc: string): Promise<string> {
+  const res = await fetch(rpc, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_gasPrice", params: [] }),
+    cache: "no-store",
+    signal: AbortSignal.timeout(4000)
+  });
+  if (!res.ok) throw new Error(`RPC ${res.status}`);
+  const json = (await res.json()) as { result?: string };
+  if (typeof json.result !== "string" || !json.result.startsWith("0x")) {
+    throw new Error("No gas price in RPC response");
   }
+  return json.result;
 }
 
 export async function GET(request: NextRequest) {
@@ -57,12 +56,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ message: "Unsupported or missing chainId." }, { status: 400 });
   }
 
-  for (const rpc of endpoints) {
-    const result = await readGasPrice(rpc);
-    if (result) {
-      // Raw hex wei; the client converts to gwei.
-      return NextResponse.json({ chainId, gasPriceWei: result });
-    }
+  try {
+    // Race all endpoints in parallel and take the first that succeeds. This
+    // caps the route at one ~4s timeout instead of N×6s sequentially, so a
+    // dead chain can't tie up a lambda for ~24s. Promise.any rejects only if
+    // every endpoint fails.
+    const gasPriceWei = await Promise.any(endpoints.map(readGasPrice));
+    return NextResponse.json({ chainId, gasPriceWei });
+  } catch {
+    return NextResponse.json({ message: "All gas RPC endpoints failed for this chain." }, { status: 502 });
   }
-  return NextResponse.json({ message: "All gas RPC endpoints failed for this chain." }, { status: 502 });
 }
