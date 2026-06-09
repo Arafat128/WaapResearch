@@ -49,7 +49,9 @@ const securityHeaders = [
       // explicit so we can tighten later when those dependencies allow it.
       "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
       "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob: https:",
+      // The app renders no remote images (token logos are not shown), so we
+      // don't need a blanket https: source here — keep it tight.
+      "img-src 'self' data: blob:",
       "font-src 'self' data:",
       `connect-src 'self' https://li.quest ${waapConnectOrigins.join(" ")} ${suiOrigins.join(" ")}`,
       `frame-src 'self' ${waapFrameOrigins.join(" ")}`,

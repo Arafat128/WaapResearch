@@ -70,12 +70,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: "Invalid JSON body." }, { status: 400 });
   }
 
-  // id must be a hex string of reasonable length — we expect a SHA-256 of
-  // the wallet address (64 hex chars). Reject anything wild to avoid set
-  // pollution.
+  // id must be exactly a SHA-256 hex digest (64 chars) of the wallet address.
+  // Narrowing from a loose 16–128 range makes set-pollution slightly harder
+  // (an attacker still can't forge real users, but can't spray arbitrary-
+  // length junk either). Note: this counter is best-effort vanity metrics,
+  // not an authenticated count — a determined actor with many fake hashes
+  // could still inflate it. Treat the number as indicative, not audited.
   const id = typeof body.id === "string" ? body.id.trim().toLowerCase() : "";
-  if (!/^[a-f0-9]{16,128}$/.test(id)) {
-    return NextResponse.json({ message: "id must be a 16–128 char hex string." }, { status: 400 });
+  if (!/^[a-f0-9]{64}$/.test(id)) {
+    return NextResponse.json({ message: "id must be a 64-char SHA-256 hex digest." }, { status: 400 });
   }
 
   const configured = Boolean(KV_URL && KV_TOKEN);

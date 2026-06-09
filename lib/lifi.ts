@@ -5,6 +5,35 @@ import type { LifiQuote, LifiQuoteRequest, TokenOption } from "@/types";
 
 const NATIVE_VALUE_BUFFER_BPS = 50n; // 0.5% headroom over user amount to cover wei rounding
 
+/**
+ * Absolute, NON-LI.FI hard ceiling on how much native value we accept as
+ * "bridge/gas overhead" on top of the user amount, per chain (in wei /
+ * smallest native unit). LI.FI declares feeCosts in its own response, which
+ * the safety check is meant to defend against — so we clamp that declared
+ * overhead to these locally-defined bounds. Real bridge messaging fees are
+ * well under these; the values are generous (≈10x typical) to avoid breaking
+ * legitimate routes while still capping a drain attack to a bounded amount.
+ *
+ * 1e18 = 1 native token (ETH/POL).
+ */
+const MAX_NATIVE_OVERHEAD_WEI: Record<number, bigint> = {
+  1: 50_000_000_000_000_000n, // Ethereum: 0.05 ETH
+  8453: 20_000_000_000_000_000n, // Base: 0.02 ETH
+  42161: 20_000_000_000_000_000n, // Arbitrum: 0.02 ETH
+  10: 20_000_000_000_000_000n, // Optimism: 0.02 ETH
+  137: 100_000_000_000_000_000_000n, // Polygon: 100 POL
+  // Testnets — generous, funds are worthless anyway.
+  11155111: 500_000_000_000_000_000n,
+  84532: 500_000_000_000_000_000n,
+  421614: 500_000_000_000_000_000n
+};
+const DEFAULT_MAX_NATIVE_OVERHEAD_WEI = 50_000_000_000_000_000n; // 0.05 native fallback
+
+function cappedNativeOverhead(chainId: number, declared: bigint): bigint {
+  const ceiling = MAX_NATIVE_OVERHEAD_WEI[chainId] ?? DEFAULT_MAX_NATIVE_OVERHEAD_WEI;
+  return declared < ceiling ? declared : ceiling;
+}
+
 const API_BASE = process.env.NEXT_PUBLIC_LIFI_API_BASE ?? "https://li.quest/v1";
 const TOKEN_CACHE_TTL_MS = 5 * 60 * 1000;
 const tokenMemoryCache = new Map<number, { timestamp: number; tokens: TokenOption[] }>();
@@ -149,37 +178,36 @@ export function assertSafeEvmTxRequest(
     fromAmount = 0n;
   }
 
+  // Parse LI.FI's declared native overhead, then CLAMP it to a local hard
+  // ceiling so a hostile quote can't inflate the allowed value by declaring
+  // huge fake fees (review concern #1).
+  let declaredOverhead = 0n;
+  try {
+    declaredOverhead = quote.estimatedNativeOverhead ? BigInt(quote.estimatedNativeOverhead) : 0n;
+  } catch {
+    declaredOverhead = 0n;
+  }
+  const nativeOverhead = cappedNativeOverhead(context.chainId, declaredOverhead);
+
   if (!isNativeSource) {
     // ERC20 swaps must not move native value... except the user must still
     // pay native bridge/messaging fees, which LI.FI puts in tx.value even
-    // when the bridged asset is an ERC20. Allow tx.value up to the quoted
+    // when the bridged asset is an ERC20. Allow tx.value up to the CAPPED
     // native overhead (with a small rounding buffer); reject anything beyond.
-    let nativeOverhead = 0n;
-    try {
-      nativeOverhead = quote.estimatedNativeOverhead ? BigInt(quote.estimatedNativeOverhead) : 0n;
-    } catch {
-      nativeOverhead = 0n;
-    }
     const erc20Allowed = nativeOverhead + (nativeOverhead * NATIVE_VALUE_BUFFER_BPS) / 10_000n;
     if (txValue > erc20Allowed) {
       throw new Error(
-        "Quote tries to send more native value than the fees LI.FI declared. Refusing to sign — refresh the quote."
+        "Quote tries to send more native value than the capped bridge-fee allowance. Refusing to sign — refresh the quote."
       );
     }
   } else if (fromAmount > 0n) {
-    // Native-source route: allow tx.value = fromAmount + bridge/protocol/gas
-    // fees that LI.FI itself quoted as native, + a small rounding buffer.
-    let nativeOverhead = 0n;
-    try {
-      nativeOverhead = quote.estimatedNativeOverhead ? BigInt(quote.estimatedNativeOverhead) : 0n;
-    } catch {
-      nativeOverhead = 0n;
-    }
+    // Native-source route: allow tx.value = fromAmount + CAPPED bridge/gas
+    // fees + a small rounding buffer.
     const base = fromAmount + nativeOverhead;
     const allowed = base + (base * NATIVE_VALUE_BUFFER_BPS) / 10_000n;
     if (txValue > allowed) {
       throw new Error(
-        `Quote tries to send ${txValue} wei, more than fromAmount (${fromAmount}) + declared native fees (${nativeOverhead}). Refusing to sign — refresh the quote.`
+        `Quote tries to send ${txValue} wei, more than fromAmount (${fromAmount}) + capped native fees (${nativeOverhead}). Refusing to sign — refresh the quote.`
       );
     }
   }
