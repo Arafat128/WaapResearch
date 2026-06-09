@@ -15,7 +15,6 @@ import { MultiSendForm } from "@/components/MultiSendForm";
 import { SwapBridgeForm } from "@/components/SwapBridgeForm";
 import { RepeatActionGate } from "@/components/RepeatActionGate";
 import { TransactionHistory } from "@/components/TransactionHistory";
-import { WalletBalances } from "@/components/WalletBalances";
 import { PortfolioCard } from "@/components/PortfolioCard";
 import { GasTracker } from "@/components/GasTracker";
 import { AddressBook } from "@/components/AddressBook";
@@ -170,7 +169,6 @@ function Dashboard() {
 
       <SwapBridgeForm defaultChainId={selectedChain} />
 
-      <WalletBalances address={activeAddress} chainId={displayChainId} />
       <RepeatActionGate defaultChainId={selectedChain} />
       <TransactionHistory />
     </main>
