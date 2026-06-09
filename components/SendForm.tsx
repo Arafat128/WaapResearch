@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, Eye, Send } from "lucide-react";
 import { parseEther, toHex } from "viem";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import { explorerTxUrl, getChain, isSuiChain } from "@/lib/chains";
 import { sendWaapTransaction, switchChain, waitForTransactionReceipt } from "@/lib/waap";
 import { sendSuiTransaction, validateSuiAddress, waitForSuiTransaction } from "@/lib/sui";
 import { upsertHistory } from "@/lib/history";
+import { getAddressBook, subscribeAddressBook, type AddressBookEntry } from "@/lib/address-book";
 import type { TransactionRecord } from "@/types";
 
 export function SendForm({ defaultChainId }: { defaultChainId: number }) {
@@ -29,9 +30,19 @@ export function SendForm({ defaultChainId }: { defaultChainId: number }) {
   const [previewed, setPreviewed] = useState(false);
   const [status, setStatus] = useState<string>();
   const [busy, setBusy] = useState(false);
+  const [book, setBook] = useState<AddressBookEntry[]>([]);
   const chain = getChain(chainId);
   const isSui = isSuiChain(chainId);
   const senderAddress = isSui ? suiAccount?.address : address;
+
+  useEffect(() => {
+    const refresh = () => setBook(getAddressBook());
+    refresh();
+    return subscribeAddressBook(refresh);
+  }, []);
+
+  // Only offer book entries matching the current chain kind.
+  const bookForChain = book.filter((entry) => (isSui ? entry.kind === "sui" : entry.kind === "evm"));
 
   const preview = useMemo(() => {
     if (!senderAddress || !amount || !recipient) return undefined;
@@ -146,7 +157,26 @@ export function SendForm({ defaultChainId }: { defaultChainId: number }) {
         </label>
         <Label className="grid gap-2">
           Recipient address
-          <Input placeholder={isSui ? "0x... Sui address" : "0x..."} value={recipient} onChange={(event) => setRecipient(event.target.value)} />
+          <Input
+            list="send-address-book"
+            placeholder={isSui ? "0x... Sui address" : "0x..."}
+            value={recipient}
+            onChange={(event) => setRecipient(event.target.value)}
+          />
+          {bookForChain.length > 0 && (
+            <datalist id="send-address-book">
+              {bookForChain.map((entry) => (
+                <option key={entry.id} value={entry.address}>
+                  {entry.label}
+                </option>
+              ))}
+            </datalist>
+          )}
+          {bookForChain.length > 0 && (
+            <span className="text-xs text-muted-foreground">
+              Tip: start typing or click the field to pick a saved address from your Address Book.
+            </span>
+          )}
         </Label>
         {assetType === "erc20" && (
           <div className="grid gap-3 sm:grid-cols-[1fr_120px]">

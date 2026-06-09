@@ -16,6 +16,9 @@ import { SwapBridgeForm } from "@/components/SwapBridgeForm";
 import { RepeatActionGate } from "@/components/RepeatActionGate";
 import { TransactionHistory } from "@/components/TransactionHistory";
 import { WalletBalances } from "@/components/WalletBalances";
+import { PortfolioCard } from "@/components/PortfolioCard";
+import { GasTracker } from "@/components/GasTracker";
+import { AddressBook } from "@/components/AddressBook";
 import { MissionGuardrails } from "@/components/MissionGuardrails";
 import { LoginCounter } from "@/components/LoginCounter";
 import { CHAINS, explorerAddressUrl, getChain, isSuiChain, SUI_MAINNET_CHAIN_ID } from "@/lib/chains";
@@ -155,6 +158,13 @@ function Dashboard() {
         <ReceiveCard chainId={selectedChain} onChainChange={setSelectedChain} />
         <SendForm defaultChainId={selectedChain} />
       </section>
+
+      <section className="dashboard-grid">
+        <PortfolioCard />
+        <GasTracker />
+      </section>
+
+      <AddressBook />
 
       <MultiSendForm defaultChainId={selectedChain} />
 

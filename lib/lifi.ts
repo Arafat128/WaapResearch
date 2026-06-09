@@ -17,6 +17,7 @@ type LifiToken = {
   decimals: number;
   chainId: number;
   logoURI?: string;
+  priceUSD?: string;
 };
 
 export async function fetchSupportedChains() {
@@ -255,7 +256,8 @@ function normalizeToken(token: LifiToken, appChainId?: number): TokenOption {
     name: token.name,
     decimals: token.decimals,
     chainId: appChainId ?? token.chainId,
-    logoURI: token.logoURI
+    logoURI: token.logoURI,
+    priceUSD: token.priceUSD
   };
 }
 

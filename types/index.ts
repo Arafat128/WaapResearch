@@ -21,6 +21,9 @@ export type TokenOption = {
   decimals: number;
   chainId: number;
   logoURI?: string;
+  /** USD price per whole token, as reported by LI.FI's /tokens endpoint.
+   *  Optional — not every listed token has a price. */
+  priceUSD?: string;
 };
 
 export type TransactionRecord = {
