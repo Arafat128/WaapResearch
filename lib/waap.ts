@@ -34,7 +34,7 @@ export function initWaapOnce() {
         showSecured: true
       },
       project: {
-        name: "Mehidy's Waap Tools",
+        name: "Waap Tools",
         entryTitle: "Log in to WaaP Action Hub",
         authSuccessUrl: window.location.origin,
         authErrorUrl: window.location.origin

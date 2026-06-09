@@ -15,7 +15,6 @@ import { MultiSendForm } from "@/components/MultiSendForm";
 import { SwapBridgeForm } from "@/components/SwapBridgeForm";
 import { RepeatActionGate } from "@/components/RepeatActionGate";
 import { TransactionHistory } from "@/components/TransactionHistory";
-import { SettingsPanel } from "@/components/SettingsPanel";
 import { WalletBalances } from "@/components/WalletBalances";
 import { MissionGuardrails } from "@/components/MissionGuardrails";
 import { LoginCounter } from "@/components/LoginCounter";
@@ -87,7 +86,7 @@ function Dashboard() {
             <Badge variant="warning">Mainnet clearly labeled</Badge>
             <Badge variant="muted">No seed phrases</Badge>
           </div>
-          <h1 className="text-3xl font-semibold tracking-normal sm:text-4xl">Mehidy&apos;s Waap Tools</h1>
+          <h1 className="text-3xl font-semibold tracking-normal sm:text-4xl">Waap Tools</h1>
           <p className="mx-auto max-w-3xl text-sm text-muted-foreground sm:text-base">
             Connect with WaaP, preview every action, and run controlled token workflows with clear risk checks.
           </p>
@@ -159,10 +158,7 @@ function Dashboard() {
 
       <MultiSendForm defaultChainId={selectedChain} />
 
-      <section className="dashboard-grid">
-        <SwapBridgeForm defaultChainId={selectedChain} />
-        <SettingsPanel />
-      </section>
+      <SwapBridgeForm defaultChainId={selectedChain} />
 
       <WalletBalances address={activeAddress} chainId={displayChainId} />
       <RepeatActionGate defaultChainId={selectedChain} />

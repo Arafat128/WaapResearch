@@ -97,7 +97,7 @@ export function LoginCounter() {
   return (
     <div
       className="fixed right-4 top-4 z-40 flex items-center gap-2 rounded-full border border-sky-400/30 bg-slate-950/70 px-3 py-1.5 text-xs font-semibold text-sky-100 backdrop-blur-md shadow-lg sm:text-sm"
-      title="Unique wallets that have connected to Mehidy's Waap Tools"
+      title="Unique wallets that have connected to Waap Tools"
       aria-live="polite"
     >
       <Users className="h-3.5 w-3.5 text-sky-300" aria-hidden="true" />

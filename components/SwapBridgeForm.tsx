@@ -46,6 +46,7 @@ export function SwapBridgeForm({ defaultChainId }: { defaultChainId: number }) {
   const [status, setStatus] = useState<string>();
   const [scheduledAt, setScheduledAt] = useState("");
   const [scheduledTarget, setScheduledTarget] = useState<number>();
+  const [scheduleEnabled, setScheduleEnabled] = useState(false);
   const scheduleTimerRef = useRef<number | undefined>(undefined);
 
   const mode = fromChain === toChain ? "swap" : "bridge";
@@ -396,41 +397,67 @@ export function SwapBridgeForm({ defaultChainId }: { defaultChainId: number }) {
           </Button>
         </div>
         <div className="grid gap-3 rounded-md border bg-background p-3 text-sm">
-          <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
-            <div>
-              <div className="font-medium">Scheduled execution</div>
-              <p className="text-muted-foreground">
-                Pick an exact local time. The app refreshes the quote at that time, then opens WaaP for manual confirmation.
-              </p>
-            </div>
-            {scheduledTarget && <span className="text-xs text-sky-100">Scheduled for {new Date(scheduledTarget).toLocaleString()}</span>}
-          </div>
-          <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
-            <Label className="grid gap-2">
-              Execute at
-              <Input type="datetime-local" value={scheduledAt} onChange={(event) => setScheduledAt(event.target.value)} />
-            </Label>
-            <Button type="button" className="self-end" variant="secondary" onClick={scheduleExecution} disabled={busy || Boolean(routeSetupIssue) || !confirmed}>
-              <AlarmClock className="h-4 w-4" />
-              Schedule
-            </Button>
-            <Button
-              type="button"
-              className="self-end"
-              variant="outline"
-              onClick={() => {
-                clearScheduledExecution();
-                setStatus("Scheduled execution cancelled.");
+          <label className="flex items-start gap-2">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={scheduleEnabled}
+              onChange={(event) => {
+                const enabled = event.target.checked;
+                setScheduleEnabled(enabled);
+                if (!enabled) {
+                  // Turning the feature off cancels any pending timer + clears inputs.
+                  clearScheduledExecution();
+                  setScheduledAt("");
+                }
               }}
-              disabled={!scheduledTarget}
-            >
-              <XCircle className="h-4 w-4" />
-              Cancel
-            </Button>
-          </div>
-          <p className="text-xs text-amber-100">
-            WaaP confirmations cannot be auto-approved from this website. That protection prevents a site from signing transactions without you.
-          </p>
+            />
+            <span>
+              <span className="font-medium">Enable scheduled execution</span>
+              <span className="block text-muted-foreground">
+                Optional. Tick to schedule this route for a later time instead of executing now.
+              </span>
+            </span>
+          </label>
+
+          {scheduleEnabled && (
+            <>
+              <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
+                <p className="text-muted-foreground">
+                  Pick an exact local time. The app refreshes the quote at that time, then opens WaaP for manual confirmation.
+                </p>
+                {scheduledTarget && (
+                  <span className="text-xs text-sky-100">Scheduled for {new Date(scheduledTarget).toLocaleString()}</span>
+                )}
+              </div>
+              <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
+                <Label className="grid gap-2">
+                  Execute at
+                  <Input type="datetime-local" value={scheduledAt} onChange={(event) => setScheduledAt(event.target.value)} />
+                </Label>
+                <Button type="button" className="self-end" variant="secondary" onClick={scheduleExecution} disabled={busy || Boolean(routeSetupIssue) || !confirmed}>
+                  <AlarmClock className="h-4 w-4" />
+                  Schedule
+                </Button>
+                <Button
+                  type="button"
+                  className="self-end"
+                  variant="outline"
+                  onClick={() => {
+                    clearScheduledExecution();
+                    setStatus("Scheduled execution cancelled.");
+                  }}
+                  disabled={!scheduledTarget}
+                >
+                  <XCircle className="h-4 w-4" />
+                  Cancel
+                </Button>
+              </div>
+              <p className="text-xs text-amber-100">
+                WaaP confirmations cannot be auto-approved from this website. That protection prevents a site from signing transactions without you.
+              </p>
+            </>
+          )}
         </div>
         {routeSetupIssue && <p className="rounded-md border border-amber-400/30 bg-amber-500/10 p-3 text-sm text-amber-100">{routeSetupIssue}</p>}
         {quote && (

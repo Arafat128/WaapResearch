@@ -36,7 +36,7 @@ export function initWaapSuiOnce() {
         showSecured: true
       },
       project: {
-        name: "Mehidy's Waap Tools",
+        name: "Waap Tools",
         entryTitle: "Log in to WaaP Action Hub"
       },
       useStaging: false
