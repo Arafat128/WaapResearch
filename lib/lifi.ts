@@ -21,7 +21,7 @@ const MAX_NATIVE_OVERHEAD_WEI: Record<number, bigint> = {
   8453: 20_000_000_000_000_000n, // Base: 0.02 ETH
   42161: 20_000_000_000_000_000n, // Arbitrum: 0.02 ETH
   10: 20_000_000_000_000_000n, // Optimism: 0.02 ETH
-  137: 100_000_000_000_000_000_000n, // Polygon: 100 POL
+  137: 20_000_000_000_000_000_000n, // Polygon: 20 POL (real bridge fees are tiny; keeps the drain ceiling low even if POL spikes)
   // Testnets — generous, funds are worthless anyway.
   11155111: 500_000_000_000_000_000n,
   84532: 500_000_000_000_000_000n,
