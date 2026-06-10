@@ -287,6 +287,47 @@ button:hover svg {
   }
 }
 
+/* ----- Mobile optimizations ----- */
+@media (max-width: 768px) {
+  /* iOS Safari ignores background-attachment: fixed combined with
+     background-size: cover (it stretches/zooms the image), and Android
+     repaints the whole fixed background on every scroll frame. Scroll
+     attachment renders correctly and scrolls smoothly on both. */
+  body {
+    background-attachment: scroll;
+  }
+
+  /* iOS auto-zooms the page when a focused form control's font-size is
+     under 16px. Our controls are text-sm (14px) on desktop; bump them to
+     16px on mobile so tapping an input doesn't jump the zoom level. */
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+
+  /* backdrop-filter blur is one of the most expensive effects on mobile
+     GPUs and we apply it to every card. A lighter blur keeps the glass
+     look without the scroll jank. */
+  .bg-card {
+    backdrop-filter: blur(6px) saturate(1.02);
+  }
+
+  /* Four full-screen animated sparkle layers are overkill for a phone GPU.
+     Two layers keep the vibe at half the compositing cost. */
+  .waap-sparkle-pink,
+  .waap-sparkle-white {
+    display: none;
+  }
+
+  /* Native checkboxes are ~13px — below comfortable touch size. */
+  input[type="checkbox"] {
+    width: 1.15rem;
+    height: 1.15rem;
+    flex-shrink: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   .waap-sparkle-layer {

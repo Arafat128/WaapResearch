@@ -1,10 +1,16 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Waap Tools",
   description: "A secure Web3 dashboard for WaaP-powered send, receive, swap, bridge, and repeat actions."
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#070c1a"
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

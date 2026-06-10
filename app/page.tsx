@@ -80,7 +80,7 @@ function Dashboard() {
   }, [activeAddress, displayChainId, currentChain.nativeCurrency]);
 
   return (
-    <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
+    <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 pb-6 pt-16 sm:px-6 sm:py-6 lg:px-8">
       <header className="grid gap-4">
         <div className="flex flex-col items-center gap-3 text-center">
           <div className="flex flex-wrap justify-center gap-2">
